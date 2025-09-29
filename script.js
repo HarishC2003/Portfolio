@@ -8,19 +8,39 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Initialize AOS for Scroll Animations ---
     AOS.init({ duration: 1000, once: true, offset: 120 });
 
-    // --- Navbar & Header Logic ---
+    // --- Element Selections ---
     const hamburger = document.querySelector(".hamburger");
     const navMenu = document.querySelector(".nav-menu");
     const header = document.querySelector(".header");
     const navLinks = document.querySelectorAll(".nav-link");
-    hamburger.addEventListener("click", () => { hamburger.classList.toggle("active"); navMenu.classList.toggle("active"); });
-    navLinks.forEach(link => link.addEventListener("click", () => { hamburger.classList.remove("active"); navMenu.classList.remove("active"); }));
-    window.addEventListener("scroll", () => { header.classList.toggle("scrolled", window.scrollY > 50); });
-
-    // --- Active Link Highlighting on Scroll ---
     const sections = document.querySelectorAll("section[id]");
+    const backToTopBtn = document.querySelector(".back-to-top");
+    const themeToggle = document.getElementById("theme-toggle");
+    const themeIcon = themeToggle.querySelector("i");
+    const contactForm = document.getElementById("contact-form");
+    const formStatus = document.getElementById("form-status");
+
+    // --- Mobile Menu Toggle ---
+    hamburger.addEventListener("click", () => {
+        hamburger.classList.toggle("active");
+        navMenu.classList.toggle("active");
+    });
+    navLinks.forEach(link => link.addEventListener("click", () => {
+        hamburger.classList.remove("active");
+        navMenu.classList.remove("active");
+    }));
+
+    // --- UPDATED: Combined scroll event listener for performance ---
     window.addEventListener("scroll", () => {
         const scrollY = window.pageYOffset;
+
+        // 1. Sticky header background
+        header.classList.toggle("scrolled", scrollY > 50);
+
+        // 2. Back to Top Button visibility
+        backToTopBtn.classList.toggle("visible", scrollY > 300);
+
+        // 3. Active link highlighting
         sections.forEach(current => {
             const sectionHeight = current.offsetHeight;
             const sectionTop = current.offsetTop - 100;
@@ -36,17 +56,24 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // --- Dark Mode Toggle ---
-    const themeToggle = document.getElementById("theme-toggle");
-    const themeIcon = themeToggle.querySelector("i");
-    const currentTheme = localStorage.getItem("theme");
-    if (currentTheme === "dark") { document.body.classList.add("dark-mode"); themeIcon.classList.replace("fa-moon", "fa-sun"); }
-    themeToggle.addEventListener("click", () => {
-        document.body.classList.toggle("dark-mode");
-        let theme = document.body.classList.contains("dark-mode") ? "dark" : "light";
-        themeIcon.classList.toggle("fa-sun", theme === "dark");
-        themeIcon.classList.toggle("fa-moon", theme === "light");
+    // --- REFACTORED: Cleaner Dark Mode Logic ---
+    const applyTheme = (theme) => {
+        if (theme === "light") {
+            document.body.classList.add("light-mode");
+            themeIcon.classList.replace("fa-moon", "fa-sun");
+        } else {
+            document.body.classList.remove("light-mode");
+            themeIcon.classList.replace("fa-sun", "fa-moon");
+        }
         localStorage.setItem("theme", theme);
+    };
+
+    const savedTheme = localStorage.getItem("theme") || "dark"; // Default to dark mode
+    applyTheme(savedTheme);
+
+    themeToggle.addEventListener("click", () => {
+        const newTheme = document.body.classList.contains("light-mode") ? "dark" : "light";
+        applyTheme(newTheme);
     });
 
     // --- Typing Effect ---
@@ -57,54 +84,41 @@ document.addEventListener("DOMContentLoaded", () => {
         loop: true
     });
 
-    // --- Skills & Projects Filters ---
-    const setupFilter = (filterButtonsSelector, cardsSelector, placeholderSelector) => {
+    // --- Skills Filter ---
+    const setupFilter = (filterButtonsSelector, cardsSelector) => {
         const filterBtns = document.querySelectorAll(filterButtonsSelector);
         const cards = document.querySelectorAll(cardsSelector);
-        const placeholder = document.getElementById(placeholderSelector);
-        if(!filterBtns.length) return; // Guard clause
+        if(!filterBtns.length) return;
         
         filterBtns.forEach(btn => {
             btn.addEventListener("click", () => {
                 filterBtns.forEach(b => b.classList.remove("active"));
                 btn.classList.add("active");
                 const filter = btn.dataset.filter;
-                let visibleCount = 0;
                 cards.forEach(card => {
                     if (filter === "all" || card.dataset.category === filter) {
                         card.style.display = "block";
-                        visibleCount++;
                     } else {
                         card.style.display = "none";
                     }
                 });
-                if (placeholder) placeholder.style.display = visibleCount === 0 ? "block" : "none";
             });
         });
     };
     setupFilter(".skills-section .filter-btn", ".skill-card");
-    setupFilter(".projects-section .project-filter-btn", ".project-card", "project-grid-placeholder");
-
-
+    
     // --- Intersection Observer for Animations ---
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
-                // Animate skill progress bars
-                if (entry.target.classList.contains('skills-section')) {
-                    entry.target.querySelectorAll('.progress').forEach(bar => {
-                        bar.style.width = bar.getAttribute('style').split(':')[1].trim();
-                    });
-                }
-                // Animate SVG timeline
                 if (entry.target.classList.contains('timeline')) {
                     entry.target.classList.add('in-view');
+                    observer.unobserve(entry.target);
                 }
-                observer.unobserve(entry.target);
             }
         });
     }, { threshold: 0.5 });
-    document.querySelectorAll('.skills-section, .timeline').forEach(el => observer.observe(el));
+    document.querySelectorAll('.timeline').forEach(el => observer.observe(el));
 
     // --- Project Modal ---
     const modal = document.getElementById("project-modal");
@@ -122,18 +136,13 @@ document.addEventListener("DOMContentLoaded", () => {
     closeModalBtn.addEventListener("click", () => modal.style.display = "none");
     window.addEventListener("click", (e) => { if (e.target === modal) modal.style.display = "none"; });
 
-    // --- Contact Form using EmailJS ---
-    const contactForm = document.getElementById("contact-form");
-    const formStatus = document.getElementById("form-status");
-    
+    // --- UPDATED: Contact Form with Auto-Hiding Message ---
     contactForm.addEventListener("submit", (e) => {
         e.preventDefault();
         
-        // --- ACTION REQUIRED ---
-        // Get your credentials from your EmailJS account and replace them here.
-        const SERVICE_ID = "YOUR_SERVICE_ID";
-        const TEMPLATE_ID = "YOUR_TEMPLATE_ID";
-        const PUBLIC_KEY = "YOUR_PUBLIC_KEY";
+        const SERVICE_ID = "service_htu4n6a";
+        const TEMPLATE_ID = "template_vwj8qcy";
+        const PUBLIC_KEY = "6evT1RRKGOkwyBges";
 
         formStatus.textContent = "Sending...";
         formStatus.style.color = "var(--text-color)";
@@ -143,13 +152,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 formStatus.textContent = "Message sent successfully!";
                 formStatus.style.color = "#22c55e";
                 contactForm.reset();
+                setTimeout(() => { formStatus.textContent = ""; }, 3000); // Clear message after 3 seconds
             }, (error) => {
                 formStatus.textContent = `Failed to send message. Error: ${JSON.stringify(error)}`;
                 formStatus.style.color = "#ef4444";
+                setTimeout(() => { formStatus.textContent = ""; }, 3000); // Clear message after 3 seconds
             });
     });
-
-    // --- Back to Top Button ---
-    const backToTopBtn = document.querySelector(".back-to-top");
-    window.addEventListener("scroll", () => { backToTopBtn.classList.toggle("visible", window.scrollY > 300); });
 });
