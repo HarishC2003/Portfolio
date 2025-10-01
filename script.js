@@ -157,9 +157,9 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault(); // Prevent the default form submission.
         
         // IMPORTANT: Replace these with your actual credentials from EmailJS.
-        const SERVICE_ID = "YOUR_SERVICE_ID";
-        const TEMPLATE_ID = "YOUR_TEMPLATE_ID";
-        const PUBLIC_KEY = "YOUR_PUBLIC_KEY";
+        const SERVICE_ID = "service_htu4n6a";
+        const TEMPLATE_ID = "template_vwj8qcy";
+        const PUBLIC_KEY = "6evT1RRKGOkwyBges";
 
         formStatus.textContent = "Sending...";
         formStatus.style.color = "var(--text-color)";
